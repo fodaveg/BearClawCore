@@ -1,5 +1,12 @@
 import Foundation
+#if canImport(AppKit)
 import AppKit
+#endif
+
+#if canImport(UIKit)
+import UIKit
+#endif
+
 import EventKit
 
 public class NoteManager: ObservableObject {
@@ -8,10 +15,10 @@ public class NoteManager: ObservableObject {
     public var templateManager = TemplateManager()
     public var bearManager = BearManager()
     
-    public init() {}  // Singleton Pattern
+    public init() {}  
     
-    var noteContent: String? // Variable para almacenar el contenido de la nota
-    let semaphore = DispatchSemaphore(value: 0) // Semáforo para la sincronización
+    var noteContent: String?
+    let semaphore = DispatchSemaphore(value: 0)
     
     public func createDailyNoteForDate(selectedDate: Date) {
         let formatter = DateFormatter()
@@ -44,7 +51,7 @@ public class NoteManager: ObservableObject {
         let searchURLString = "bear://x-callback-url/search?term=\(searchText)&tag=\(tag)&x-success=fodabear://open-note-success&x-error=fodabear://open-note-error&token=XXXXX"
         if let searchURL = URL(string: searchURLString) {
             print("Searching daily note with URL: \(searchURL)")
-            NSWorkspace.shared.open(searchURL)
+            openURL(searchURL)
             DispatchQueue.global().async {
                 let result = self.semaphore.wait(timeout: .now() + 10)
                 if result == .success {
@@ -87,5 +94,13 @@ public class NoteManager: ObservableObject {
         let formatter = DateFormatter()
         formatter.dateFormat = SettingsManager.shared.selectedDateFormat
         return formatter.string(from: date)
+    }
+
+    private func openURL(_ url: URL) {
+        #if canImport(AppKit)
+        NSWorkspace.shared.open(url)
+        #elseif canImport(UIKit)
+        UIApplication.shared.open(url, options: [:], completionHandler: nil)
+        #endif
     }
 }

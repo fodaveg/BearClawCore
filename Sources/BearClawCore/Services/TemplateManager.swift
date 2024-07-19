@@ -1,5 +1,11 @@
 import Foundation
+#if canImport(AppKit)
 import AppKit
+#endif
+
+#if canImport(UIKit)
+import UIKit
+#endif
 
 public class TemplateManager {
     public static let shared = TemplateManager()
@@ -41,7 +47,7 @@ public class TemplateManager {
     
     func replaceCalendarSection(in content: String, with events: String) -> String {
         let calendarSectionHeader = UserDefaults.standard.string(forKey: "calendarSectionHeader") ?? "## Calendar Events"
-        let pattern = "\(calendarSectionHeader)\\n(?:- \\[ \\] .*\\n|- \\[x\\] .*\\n)*"
+        let pattern = "\(calendarSectionHeader)\\n(?:- \\[ \\] .*\\n|- \\[x\\] .*\\n|No events scheduled for this day.\\n)*"
         
         do {
             let regex = try NSRegularExpression(pattern: pattern, options: [])
@@ -50,7 +56,7 @@ public class TemplateManager {
                 let range = Range(match.range, in: content)!
                 let before = content[..<range.lowerBound]
                 let after = content[range.upperBound...]
-                return before + "\(calendarSectionHeader)\n" + events + "\n\(after)"
+                return before + "\(calendarSectionHeader)\n" + events + "\n" + after
             } else {
                 return content
             }
@@ -93,7 +99,7 @@ public class TemplateManager {
         }
     }
     
-    func processTemplate(_ template: String, for dateString: String) -> String {
+    func processTemplate(_ template: String, for dateString: String, with tag: String) -> String {
         let regex: NSRegularExpression
         do {
             regex = try NSRegularExpression(pattern: "%date\\(([-+]?\\d*)\\)%", options: [])
@@ -121,22 +127,34 @@ public class TemplateManager {
             processedTemplate = (processedTemplate as NSString).replacingCharacters(in: matchRange, with: targetDateString)
         }
         
+        if processedTemplate.contains("%tag_placeholder%") {
+            processedTemplate = processedTemplate.replacingOccurrences(of: "%tag_placeholder%", with: "#\(tag)#")
+        } else {
+            processedTemplate += "\n\n#\(tag)#"
+        }
+        
         return processedTemplate
     }
     
     func createDailyNoteWithTemplate(for dateString: String, with dailyTemplate: String? = "Daily") {
-        print("templatecontent: (dailyTemplate)")
-        let processedTemplate = processTemplate(dailyTemplate ?? "Daily", for: dateString)
+        print("template content: \(dailyTemplate ?? "Daily")")
+        let tag = UserDefaults.standard.string(forKey: "dailyNoteTag") ?? ""
+        let processedTemplate = processTemplate(dailyTemplate ?? "Daily", for: dateString, with: tag)
         print(processedTemplate)
-        print("processed template: (processedTemplate)")
+        print("processed template: \(processedTemplate)")
         
-        var urlString = "bear://x-callback-url/create?title=&text=\(processedTemplate)"
-        if let tag = UserDefaults.standard.string(forKey: "dailyNoteTag"), !tag.isEmpty {
-            urlString += "&tags=\(tag)&x-success=fodabear://replace-sync-placeholder"
-        }
+        let urlString = "bear://x-callback-url/create?title=&text=\(processedTemplate)"
         
         if let url = URL(string: urlString.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!) {
-            NSWorkspace.shared.open(url)
+            openURL(url)
         }
+    }
+    
+    private func openURL(_ url: URL) {
+#if canImport(AppKit)
+        NSWorkspace.shared.open(url)
+#elseif canImport(UIKit)
+        UIApplication.shared.open(url, options: [:], completionHandler: nil)
+#endif
     }
 }

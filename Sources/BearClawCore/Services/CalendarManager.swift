@@ -62,13 +62,16 @@ public class CalendarManager: ObservableObject {
         return calendars.filter { selectedCalendarIDs.contains($0.calendarIdentifier) }
     }
     
+    var previousOutput: String = ""
+
     public func fetchCalendarEvents(for dateString: String) -> String {
         print("Fetching calendar events for date: \(dateString)")
         
         let selectedCalendars = self.selectedCalendars()
         guard !selectedCalendars.isEmpty else {
             print("Warning: No calendars selected")
-            return ""
+            previousOutput = "No events scheduled for this day."
+            return previousOutput
         }
         
         let startDate = getDate(from: dateString)
@@ -76,35 +79,38 @@ public class CalendarManager: ObservableObject {
         
         print("Start date: \(startDate), End date: \(endDate)")
         
-        do {
-            let predicate = eventStore.predicateForEvents(withStart: startDate, end: endDate, calendars: selectedCalendars)
-            let events = eventStore.events(matching: predicate)
-            
-            print("Number of events found: \(events.count)")
-            
-            if events.isEmpty {
-                print("No events found for the specified date")
-                return "No events scheduled for this day."
+        let predicate = eventStore.predicateForEvents(withStart: startDate, end: endDate, calendars: selectedCalendars)
+        let events = eventStore.events(matching: predicate)
+        
+        print("Number of events found: \(events.count)")
+        
+        if events.isEmpty {
+            print("No events found for the specified date")
+            if previousOutput.isEmpty || previousOutput == "No events scheduled for this day." {
+                previousOutput = "No events scheduled for this day."
             }
-            
-            let now = Date()
-            let formattedEvents = events.map { event in
-                let formatter = DateFormatter()
-                formatter.dateFormat = "HH:mm"
-                let startTimeString = formatter.string(from: event.startDate)
-                let endTimeString = formatter.string(from: event.endDate)
-                
-                // Marcar como completada si la fecha de finalización es superior a la hora actual
-                let status = event.endDate < now ? "x" : " "
-                
-                return "- [\(status)] \(startTimeString) - \(endTimeString): \(event.title ?? "")"
-            }.joined(separator: "\n")
-            
-            print("Formatted events:\n\(formattedEvents)")
-            
-            return formattedEvents
+            return previousOutput
         }
+        
+        let now = Date()
+        let formattedEvents = events.map { event in
+            let formatter = DateFormatter()
+            formatter.dateFormat = "HH:mm"
+            let startTimeString = formatter.string(from: event.startDate)
+            let endTimeString = formatter.string(from: event.endDate)
+            
+            // Marcar como completada si la fecha de finalización es superior a la hora actual
+            let status = event.endDate < now ? "x" : " "
+            
+            return "- [\(status)] \(startTimeString) - \(endTimeString): \(event.title ?? "")"
+        }.joined(separator: "\n")
+        
+        print("Formatted events:\n\(formattedEvents)")
+        
+        previousOutput = formattedEvents
+        return previousOutput
     }
+
     
     private func getDate(from dateString: String) -> Date {
         let formatter = DateFormatter()
