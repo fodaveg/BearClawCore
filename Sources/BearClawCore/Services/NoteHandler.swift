@@ -90,10 +90,13 @@ public class NoteHandler: NSObject, ObservableObject {
             return
         }
         
-        guard let title = queryItems.first(where: { $0.name == "title" })?.value else { return }
-        guard let note = queryItems.first(where: { $0.name == "note" })?.value else { return }
-        guard let id = queryItems.first(where: { $0.name == "identifier" })?.value else { return }
-        NoteManager.shared.updateDailyNoteWithCalendarEvents(for: title, noteContent: note, noteId: id, open: false)
+        guard let title = queryItems.first(where: { $0.name == "title" })?.value,
+              let note = queryItems.first(where: { $0.name == "note" })?.value,
+              let id = queryItems.first(where: { $0.name == "identifier" })?.value else { return }
+        
+        DispatchQueue.main.async {
+            NoteManager.shared.updateDailyNoteWithCalendarEvents(for: title, noteContent: note, noteId: id, open: false)
+        }
     }
     
     @objc public func updateNoteAndOpen(url: URL) {

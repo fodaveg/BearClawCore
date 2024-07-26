@@ -41,7 +41,8 @@ public class TemplateManager {
             processedTemplate = (processedTemplate as NSString).replacingCharacters(in: matchRange, with: targetDateString)
         }
         
-        let updatedProcessedTemplate = replaceCalendarSection(in: processedTemplate, with: calendarManager.fetchCalendarEvents(for: dateString))
+        let selectedCalendars = calendarManager.selectedCalendars()        
+        let updatedProcessedTemplate = replaceCalendarSection(in: processedTemplate, with: calendarManager.fetchCalendarEvents(for: dateString, calendars: selectedCalendars))
         
         return updatedProcessedTemplate
     }

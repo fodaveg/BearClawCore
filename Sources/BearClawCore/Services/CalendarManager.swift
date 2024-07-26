@@ -3,25 +3,34 @@ import EventKit
 import SwiftUI
 
 public class CalendarManager: ObservableObject {
-    public static let shared = CalendarManager()
-    let calendarSyncManager = CalendarSyncManager.shared
-    let eventStore = EKEventStore()
-    
-    @Published public var selectedCalendarIDs: [String] {
+    @Published public var selectedCalendarIDs: [String] = [] {
         didSet {
-            UserDefaults.standard.set(selectedCalendarIDs, forKey: "selectedCalendarIDs")
+            if selectedCalendarIDs != oldValue {
+                DispatchQueue.main.async {
+                    SettingsManager.shared.selectedCalendarIDsArray = self.selectedCalendarIDs
+                }
+                objectWillChange.send()
+            }
         }
     }
+    
+    public static let shared = CalendarManager()
+    //  let calendarSyncManager = CalendarSyncManager.shared
+    let eventStore = EKEventStore()
     
     @Published public var isAuthorized: Bool = false
     
     public init() {
-        if let storedCalendarIDs = UserDefaults.standard.array(forKey: "selectedCalendarIDs") as? [String] {
-            selectedCalendarIDs = storedCalendarIDs
-        } else {
-            selectedCalendarIDs = []
-        }
+        self.selectedCalendarIDs = SettingsManager.shared.selectedCalendarIDsArray
+        NotificationCenter.default.addObserver(self, selector: #selector(settingsChanged), name: UserDefaults.didChangeNotification, object: nil)
         checkCalendarAuthorizationStatus()
+    }
+    
+    @objc private func settingsChanged() {
+        let newSelection = SettingsManager.shared.selectedCalendarIDsArray
+        if Set(self.selectedCalendarIDs) != Set(newSelection) {
+            self.selectedCalendarIDs = newSelection
+        }
     }
     
     public func checkCalendarAuthorizationStatus() {
@@ -53,29 +62,10 @@ public class CalendarManager: ObservableObject {
         }
     }
     
-    public func addEvent(title: String, startDate: Date, endDate: Date, notes: String? = nil, completion: @escaping (Bool, Error?) -> Void) {
-        let event = EKEvent(eventStore: eventStore)
-        event.title = title
-        event.startDate = startDate
-        event.endDate = endDate
-        event.notes = notes
-        event.calendar = eventStore.defaultCalendarForNewEvents
-        
-        do {
-            try eventStore.save(event, span: .thisEvent)
-            completion(true, nil)
-        } catch let error {
-            completion(false, error)
-        }
-    }
     
-    public func fetchEvents(startDate: Date, endDate: Date) -> [EKEvent]? {
-        let selectedCalendars = self.selectedCalendars()
-        guard !selectedCalendars.isEmpty else {
-            print("No calendars selected.")
-            return []
-        }
-        let predicate = eventStore.predicateForEvents(withStart: startDate, end: endDate, calendars: selectedCalendars)
+    
+    public func fetchEvents(startDate: Date, endDate: Date, calendars: [EKCalendar]) -> [EKEvent] {
+        let predicate = eventStore.predicateForEvents(withStart: startDate, end: endDate, calendars: calendars)
         return eventStore.events(matching: predicate)
     }
     
@@ -90,11 +80,8 @@ public class CalendarManager: ObservableObject {
     
     var previousOutput: String = ""
     
-    public func fetchCalendarEvents(for dateString: String) -> String {
-        print("Fetching calendar events for date: \(dateString)")
-        
-        let selectedCalendars = self.selectedCalendars()
-        guard !selectedCalendars.isEmpty else {
+    public func fetchCalendarEvents(for dateString: String, calendars: [EKCalendar]) -> String {
+        guard !calendars.isEmpty else {
             print("Warning: No calendars selected")
             return "No events scheduled for this day."
         }
@@ -106,11 +93,10 @@ public class CalendarManager: ObservableObject {
         
         let endDate = Calendar.current.date(byAdding: .day, value: 1, to: startDate)!
         
-        print("Start date: \(startDate), End date: \(endDate)")
+        print("Fetching events for date: \(dateString), using calendars: \(calendars.map { $0.title })")
         
-        let predicate = eventStore.predicateForEvents(withStart: startDate, end: endDate, calendars: selectedCalendars)
+        let predicate = eventStore.predicateForEvents(withStart: startDate, end: endDate, calendars: calendars)
         let events = eventStore.events(matching: predicate)
-        
         
         if events.isEmpty {
             print("No events found for the specified date")
@@ -131,8 +117,6 @@ public class CalendarManager: ObservableObject {
             
             return "- [\(status)] \(startTimeString) - \(endTimeString): \(event.title ?? "")"
         }.joined(separator: "\n")
-        
-        print("Formatted events:\n\(formattedEvents)")
         
         previousOutput = formattedEvents
         return previousOutput
@@ -194,4 +178,12 @@ public class CalendarManager: ObservableObject {
         
         return "^" + regexPattern + "$"
     }
+    
+    public func reloadCalendarConfiguration() {
+        let savedIDs = SettingsManager.shared.selectedCalendarIDsArray
+        if selectedCalendarIDs != savedIDs {
+            selectedCalendarIDs = savedIDs
+        }
+    }
+    
 }

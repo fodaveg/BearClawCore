@@ -23,6 +23,20 @@ public class SettingsManager: ObservableObject {
     @AppStorage("dailyNoteTemplate") public var dailyNoteTemplate: String = ""
     @AppStorage("selectedDateFormat") public var selectedDateFormat: String = "yyyy-MM-dd"
     @AppStorage("customDateFormat") public var customDateFormat: String = ""
+    @AppStorage("selectedCalendarIDs") public var selectedCalendarIDs: String = ""
+    
+    public var selectedCalendarIDsArray: [String] {
+        get {
+            return selectedCalendarIDs.split(separator: ",").map(String.init)
+        }
+        set {
+            let newString = newValue.joined(separator: ",")
+            if selectedCalendarIDs != newString {
+                selectedCalendarIDs = newString
+                NotificationCenter.default.post(name: .calendarSelectionChanged, object: nil)
+            }
+        }
+    }
     
     public init() {}
     

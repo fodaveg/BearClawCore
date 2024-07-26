@@ -12,16 +12,16 @@ import AppKit
 import UIKit
 #endif
 
-
 public class CalendarSyncManager: NSObject, ObservableObject {
-    public static let shared = CalendarSyncManager()
+    public static let shared = CalendarSyncManager(calendarManager: CalendarManager.shared)
     lazy var noteManager = NoteManager.shared
-    var updateTimer: Timer?
+    private let calendarManager: CalendarManager
     
-    public func updateHomeNoteWithCurrentDateEvents() {
-        let dateString = getCurrentDateString()
-        let events = noteManager.calendarManager.fetchCalendarEvents(for: dateString)
-        noteManager.bearManager.createNoteWithContent(events)
+    // var updateTimer: Timer?
+    
+    public init(calendarManager: CalendarManager = .shared) {
+        self.calendarManager = calendarManager
+        super.init()
     }
     
     @objc public func syncNow() {
@@ -45,26 +45,6 @@ public class CalendarSyncManager: NSObject, ObservableObject {
     }
     
     public func scheduleCalendarUpdates() {}
-    
-    public func getDateString(forDaysBefore daysBefore: Int) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = SettingsManager.shared.selectedDateFormat
-        let date = Calendar.current.date(byAdding: .day, value: -daysBefore, to: Date())!
-        return formatter.string(from: date)
-    }
-    
-    public func getDateString(forDaysAfter daysAfter: Int) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = SettingsManager.shared.selectedDateFormat
-        let date = Calendar.current.date(byAdding: .day, value: daysAfter, to: Date())!
-        return formatter.string(from: date)
-    }
-    
-    public func getCurrentDateString() -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = SettingsManager.shared.selectedDateFormat
-        return formatter.string(from: Date())
-    }
     
     private func openURL(_ url: URL) {
 #if canImport(AppKit)
