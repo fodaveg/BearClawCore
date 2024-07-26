@@ -9,6 +9,7 @@ import UIKit
 import Foundation
 import Combine
 
+
 public class NoteHandler: NSObject, ObservableObject {
     public static let shared = NoteHandler()
     var bearManager = BearManager.shared
@@ -74,11 +75,13 @@ public class NoteHandler: NSObject, ObservableObject {
             return
         }
         
-        guard let title = queryItems.first(where: { $0.name == "title" })?.value else { return }
-        guard let note = queryItems.first(where: { $0.name == "note" })?.value else { return }
-        guard let id = queryItems.first(where: { $0.name == "identifier" })?.value else { return }
+        guard let title = queryItems.first(where: { $0.name == "title" })?.value,
+              let note = queryItems.first(where: { $0.name == "note" })?.value,
+              let id = queryItems.first(where: { $0.name == "identifier" })?.value else { return }
         
-        NoteManager.shared.updateDailyNoteWithCalendarEvents(for: title, noteContent: note, noteId: id)
+        DispatchQueue.main.async {
+            NoteManager.shared.updateDailyNoteWithCalendarEvents(for: title, noteContent: note, noteId: id)
+        }
     }
     
     @objc public func updateDailyNoteIfNeededSuccessForSync(url: URL) {
@@ -118,17 +121,19 @@ public class NoteHandler: NSObject, ObservableObject {
         }
     }
     
+    
     @objc public func updateHomeNoteIfNeededSuccess(url: URL) {
         let homeNoteId = SettingsManager.shared.homeNoteID
         let currentDateFormatted = getCurrentDateFormatted()
         guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
-              let queryItems = components.queryItems else {
+              let queryItems = components.queryItems,
+              let note = queryItems.first(where: { $0.name == "note" })?.value else {
             return
         }
         
-        guard let note = queryItems.first(where: { $0.name == "note" })?.value else { return }
-        
-        NoteManager.shared.updateHomeNoteWithCalendarEvents(for: currentDateFormatted, noteContent: note, homeNoteId: homeNoteId)
+        DispatchQueue.main.async {
+            NoteManager.shared.updateHomeNoteWithCalendarEvents(for: currentDateFormatted, noteContent: note, homeNoteId: homeNoteId)
+        }
     }
     
     @objc public func updateHomeNoteIfNeededError(url: URL) {
@@ -220,13 +225,13 @@ public class NoteHandler: NSObject, ObservableObject {
         print(date)
         guard let template = SettingsManager.shared.loadTemplates().first(where: { $0.name == "Daily" }) else { return }
         print(template)
-
+        
         let processedContent = templateManager.processTemplateVariables(template.content, for: date)
         print(processedContent)
-
+        
         let tags = [template.tag]
         print(tags)
-
+        
         let success = "fodabear://replace-sync-placeholder"
         
         let createURLString = "bear://x-callback-url/create?text=\(processedContent.addingPercentEncodingForRFC3986() ?? "")&tags=\(tags.joined(separator: ",").addingPercentEncodingForRFC3986() ?? "")&open_note=no&show_window=no&x-success=\(success.addingPercentEncodingForRFC3986() ?? "")"
@@ -253,7 +258,9 @@ public class NoteHandler: NSObject, ObservableObject {
         
         guard let template = SettingsManager.shared.loadTemplates().first(where: { $0.name == templateName }) else { return }
         
-        bearManager.openTemplate(template)
+        DispatchQueue.main.async {
+            self.bearManager.openTemplate(template)
+        }
     }
 #endif
     

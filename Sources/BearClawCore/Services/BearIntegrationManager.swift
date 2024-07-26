@@ -8,42 +8,43 @@ import AppKit
 import UIKit
 #endif
 
+
 public class BearIntegrationManager {
     public static let shared = BearIntegrationManager()
-
+    
     public func isBearInstalled() -> Bool {
         if let url = URL(string: "bear://") {
-            #if canImport(AppKit)
+#if canImport(AppKit)
             return NSWorkspace.shared.urlForApplication(toOpen: url) != nil
-            #elseif canImport(UIKit)
+#elseif canImport(UIKit)
             return UIApplication.shared.canOpenURL(url)
-            #else
+#else
             return false
-            #endif
+#endif
         }
         return false
     }
-
+    
     public func showErrorMessage() {
-        #if canImport(AppKit)
+#if canImport(AppKit)
         let alert = NSAlert()
         alert.messageText = "Bear is not installed"
         alert.informativeText = "This companion application requires Bear to be installed in order to function. Please install Bear and try again."
         alert.alertStyle = .critical
         alert.addButton(withTitle: "Close")
         alert.runModal()
-        #elseif canImport(UIKit)
+#elseif canImport(UIKit)
         let alert = UIAlertController(title: "Bear is not installed", message: "This companion application requires Bear to be installed in order to function. Please install Bear and try again.", preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: "Close", style: .default, handler: nil))
         if let rootVC = UIApplication.shared.windows.first?.rootViewController {
             rootVC.present(alert, animated: true, completion: nil)
         }
-        #endif
+#endif
     }
-
+    
     public func handleCallback(url: URL) {
         print("Handling callback for URL: \(url)")
-
+        
         if let host = url.host {
             switch host {
             case "update-home-note-if-needed-success":

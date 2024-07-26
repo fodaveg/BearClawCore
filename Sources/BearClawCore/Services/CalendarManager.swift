@@ -3,13 +3,17 @@ import EventKit
 import SwiftUI
 
 public class CalendarManager: ObservableObject {
-    static let shared = CalendarManager()
+    public static let shared = CalendarManager()
+    let calendarSyncManager = CalendarSyncManager.shared
     let eventStore = EKEventStore()
+    
     @Published public var selectedCalendarIDs: [String] {
         didSet {
             UserDefaults.standard.set(selectedCalendarIDs, forKey: "selectedCalendarIDs")
         }
     }
+    
+    @Published public var isAuthorized: Bool = false
     
     public init() {
         if let storedCalendarIDs = UserDefaults.standard.array(forKey: "selectedCalendarIDs") as? [String] {
@@ -17,13 +21,35 @@ public class CalendarManager: ObservableObject {
         } else {
             selectedCalendarIDs = []
         }
+        checkCalendarAuthorizationStatus()
     }
     
-    public func requestAccess(completion: @escaping (Bool) -> Void) {
-        eventStore.requestFullAccessToEvents { granted, error in
-            DispatchQueue.main.async {
-                completion(granted)
+    public func checkCalendarAuthorizationStatus() {
+        let status = EKEventStore.authorizationStatus(for: .event)
+        DispatchQueue.main.async {
+            self.isAuthorized = (status == .fullAccess)
+        }
+    }
+    
+    public func requestCalendarAccess() async -> Bool {
+        let status = EKEventStore.authorizationStatus(for: .event)
+        
+        switch status {
+        case .authorized, .fullAccess:
+            return true
+        case .denied, .restricted, .writeOnly:
+            return false
+        case .notDetermined:
+            return await withCheckedContinuation { continuation in
+                self.eventStore.requestFullAccessToEvents { granted, error in
+                    DispatchQueue.main.async {
+                        self.isAuthorized = granted
+                        continuation.resume(returning: granted)
+                    }
+                }
             }
+        @unknown default:
+            return false
         }
     }
     
@@ -63,18 +89,21 @@ public class CalendarManager: ObservableObject {
     }
     
     var previousOutput: String = ""
-
+    
     public func fetchCalendarEvents(for dateString: String) -> String {
         print("Fetching calendar events for date: \(dateString)")
         
         let selectedCalendars = self.selectedCalendars()
         guard !selectedCalendars.isEmpty else {
             print("Warning: No calendars selected")
-            previousOutput = "No events scheduled for this day."
-            return previousOutput
+            return "No events scheduled for this day."
         }
         
-        let startDate = getDate(from: dateString)
+        guard let startDate = getDate(from: dateString) else {
+            print("Error: Invalid date format")
+            return "Error: Invalid date format"
+        }
+        
         let endDate = Calendar.current.date(byAdding: .day, value: 1, to: startDate)!
         
         print("Start date: \(startDate), End date: \(endDate)")
@@ -82,7 +111,6 @@ public class CalendarManager: ObservableObject {
         let predicate = eventStore.predicateForEvents(withStart: startDate, end: endDate, calendars: selectedCalendars)
         let events = eventStore.events(matching: predicate)
         
-        print("Number of events found: \(events.count)")
         
         if events.isEmpty {
             print("No events found for the specified date")
@@ -99,7 +127,6 @@ public class CalendarManager: ObservableObject {
             let startTimeString = formatter.string(from: event.startDate)
             let endTimeString = formatter.string(from: event.endDate)
             
-            // Marcar como completada si la fecha de finalización es superior a la hora actual
             let status = event.endDate < now ? "x" : " "
             
             return "- [\(status)] \(startTimeString) - \(endTimeString): \(event.title ?? "")"
@@ -110,11 +137,61 @@ public class CalendarManager: ObservableObject {
         previousOutput = formattedEvents
         return previousOutput
     }
-
     
-    private func getDate(from dateString: String) -> Date {
+    private func getDate(from dateString: String) -> Date? {
+        let dateFormat = SettingsManager.shared.selectedDateFormat
+        
         let formatter = DateFormatter()
-        formatter.dateFormat = SettingsManager.shared.selectedDateFormat
-        return formatter.date(from: dateString)!
+        formatter.dateFormat = dateFormat
+        if let date = formatter.date(from: dateString) {
+            return date
+        }
+        
+        print("Failed to parse date: \(dateString) with format: \(dateFormat)")
+        return nil
+    }
+    
+    func extractDate(from text: String, withFormat dateFormat: String) -> String? {
+        let regexPattern = regexFromDateFormat(dateFormat)
+        
+        guard let regex = try? NSRegularExpression(pattern: regexPattern, options: []) else {
+            print("Error al crear la expresión regular con el patrón: \(regexPattern)")
+            return nil
+        }
+        
+        let range = NSRange(location: 0, length: text.utf16.count)
+        if let match = regex.firstMatch(in: text, options: [], range: range) {
+            if let dateRange = Range(match.range, in: text) {
+                let dateString = String(text[dateRange])
+                return dateString
+            }
+        }
+        
+        return nil
+    }
+    
+    func regexFromDateFormat(_ dateFormat: String) -> String {
+        var regexPattern = NSRegularExpression.escapedPattern(for: dateFormat)
+        
+        let tokenMap: [String: String] = [
+            "yyyy": "(\\d{4})",
+            "yy": "(\\d{2})",
+            "MM": "(0[1-9]|1[0-2])",
+            "M": "(0?[1-9]|1[0-2])",
+            "dd": "(0[1-9]|[12]\\d|3[01])",
+            "d": "([1-9]|[12]\\d|3[01])",
+            "HH": "([01]\\d|2[0-3])",
+            "H": "(0?\\d|1\\d|2[0-3])",
+            "mm": "([0-5]\\d)",
+            "m": "([1-5]?\\d)",
+            "ss": "([0-5]\\d)",
+            "s": "([1-5]?\\d)"
+        ]
+        
+        for (token, regex) in tokenMap {
+            regexPattern = regexPattern.replacingOccurrences(of: NSRegularExpression.escapedPattern(for: token), with: regex)
+        }
+        
+        return "^" + regexPattern + "$"
     }
 }

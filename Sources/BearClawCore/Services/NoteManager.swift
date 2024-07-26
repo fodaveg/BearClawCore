@@ -9,6 +9,7 @@ import UIKit
 
 import EventKit
 
+
 public class NoteManager: ObservableObject {
     public static let shared = NoteManager()
     public var calendarManager = CalendarManager()
@@ -66,19 +67,13 @@ public class NoteManager: ObservableObject {
     }
     
     public func updateDailyNoteWithCalendarEvents(for dateString: String, noteContent: String, noteId: String, open: Bool = true) {
-        let dispatchGroup = DispatchGroup()
-        
-        dispatchGroup.enter()
         let events = calendarManager.fetchCalendarEvents(for: dateString)
         let cleanedEvents = events.replacingOccurrences(of: "Optional(\"", with: "").replacingOccurrences(of: "\")", with: "")
-        dispatchGroup.leave()
         
-        dispatchGroup.notify(queue: .main) {
-            print("update daily calendar: \(events)")
-            var updatedContent = self.templateManager.replaceCalendarSection(in: noteContent, with: cleanedEvents)
-            updatedContent = self.templateManager.replaceSyncSection(in: updatedContent, id: noteId)
-            self.bearManager.updateNoteContent(newContent: updatedContent, noteID: noteId, open: open, show: open)
-        }
+        print("update daily calendar: \(events)")
+        var updatedContent = self.templateManager.replaceCalendarSection(in: noteContent, with: cleanedEvents)
+        updatedContent = self.templateManager.replaceSyncSection(in: updatedContent, id: noteId)
+        self.bearManager.updateNoteContent(newContent: updatedContent, noteID: noteId, open: open, show: open)
     }
     
     public func updateHomeNoteWithCalendarEvents(for dateString: String, noteContent: String, homeNoteId: String) {
@@ -95,12 +90,12 @@ public class NoteManager: ObservableObject {
         formatter.dateFormat = SettingsManager.shared.selectedDateFormat
         return formatter.string(from: date)
     }
-
+    
     private func openURL(_ url: URL) {
-        #if canImport(AppKit)
+#if canImport(AppKit)
         NSWorkspace.shared.open(url)
-        #elseif canImport(UIKit)
+#elseif canImport(UIKit)
         UIApplication.shared.open(url, options: [:], completionHandler: nil)
-        #endif
+#endif
     }
 }

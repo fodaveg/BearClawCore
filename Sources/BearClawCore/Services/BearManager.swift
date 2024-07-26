@@ -7,6 +7,7 @@ import AppKit
 import UIKit
 #endif
 
+
 public class BearManager {
     public static let shared = BearManager()
     
@@ -52,7 +53,7 @@ public class BearManager {
         
         let processedTemplate = NoteManager.shared.templateManager.processTemplate(template.content, for: dateString, with: template.tag)
         let encodedTemplate = processedTemplate.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-               
+        
         if let url = URL(string: "bear://x-callback-url/create?title=&text=\(encodedTemplate)") {
             print("Creating note with URL: \(url)")
             openURL(url)

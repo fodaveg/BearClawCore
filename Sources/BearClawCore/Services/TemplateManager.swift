@@ -7,6 +7,7 @@ import AppKit
 import UIKit
 #endif
 
+
 public class TemplateManager {
     public static let shared = TemplateManager()
     
