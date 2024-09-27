@@ -13,13 +13,13 @@ import UIKit
 #endif
 
 public class CalendarSyncManager: NSObject, ObservableObject {
-    public static let shared = CalendarSyncManager(calendarManager: CalendarManager.shared)
-    lazy var noteManager = NoteManager.shared
+    public static let shared = CalendarSyncManager(calendarManager: CalendarManager())
+    lazy var noteManager = NoteManager()
     private let calendarManager: CalendarManager
     
     // var updateTimer: Timer?
     
-    public init(calendarManager: CalendarManager = .shared) {
+    public init(calendarManager: CalendarManager) {
         self.calendarManager = calendarManager
         super.init()
     }
