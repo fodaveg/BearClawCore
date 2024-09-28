@@ -39,15 +39,16 @@ public class NoteHandler: NSObject, ObservableObject {
 
             let date = getCurrentDateFormatted()
 
+            let tags = homeTemplate.tag
+            
             let processedContent = templateManager.processTemplateVariables(
-                homeTemplate.content, for: date)
-
-            let tags = [homeTemplate.tag]
+                homeTemplate.content, for: date, with: tags, isHome: true)
+        
 
             let success = "fodabear://open-home-note-and-save-id"
 
             let createURLString =
-                "bear://x-callback-url/create?pin=yes&text=\(processedContent.addingPercentEncodingForRFC3986() ?? "")&tags=\(tags.joined(separator: ",").addingPercentEncodingForRFC3986() ?? "")&open_note=no&show_window=no&x-success=\(success.addingPercentEncodingForRFC3986() ?? "")"
+                "bear://x-callback-url/create?pin=yes&text=\(processedContent.addingPercentEncodingForRFC3986() ?? "")&open_note=no&show_window=no&x-success=\(success.addingPercentEncodingForRFC3986() ?? "")"
             print(createURLString)
             if let fetchURL = URL(string: createURLString) {
                 openURL(fetchURL)
@@ -385,16 +386,13 @@ public class NoteHandler: NSObject, ObservableObject {
         print(template)
 
         let processedContent = templateManager.processTemplateVariables(
-            template.content, for: date)
+            template.content, for: date, with: template.tag)
         print(processedContent)
-
-        let tags = [template.tag]
-        print(tags)
 
         let success = "fodabear://replace-sync-placeholder"
 
         let createURLString =
-            "bear://x-callback-url/create?text=\(processedContent.addingPercentEncodingForRFC3986() ?? "")&tags=\(tags.joined(separator: ",").addingPercentEncodingForRFC3986() ?? "")&open_note=no&show_window=no&x-success=\(success.addingPercentEncodingForRFC3986() ?? "")"
+            "bear://x-callback-url/create?text=\(processedContent.addingPercentEncodingForRFC3986() ?? "")&open_note=no&show_window=no&x-success=\(success.addingPercentEncodingForRFC3986() ?? "")"
         print(createURLString)
         if let fetchURL = URL(string: createURLString) {
             openURL(fetchURL)

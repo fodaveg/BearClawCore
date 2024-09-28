@@ -19,9 +19,9 @@ public class SettingsManager: ObservableObject {
     @AppStorage("templates") public var templatesData: Data = Data()
     @AppStorage("launchAtLogin") public var launchAtLogin: Bool = false
     @AppStorage("calendarSectionHeader") public var calendarSectionHeader:
-        String = "## Calendar Events"
+        String = "### Calendar Events"
     @AppStorage("dailySectionHeader") public var dailySectionHeader: String =
-        "## Daily"
+        "### Daily"
     @AppStorage("dailyNoteTag") public var dailyNoteTag: String = ""
     @AppStorage("dailyNoteTemplate") public var dailyNoteTemplate: String = ""
     @AppStorage("selectedDateFormat") public var selectedDateFormat: String =

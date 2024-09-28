@@ -14,7 +14,8 @@ public class TemplateManager {
     public let calendarManager = CalendarManager()
 
     public func processTemplateVariables(
-        _ content: String, for dateString: String
+        _ content: String, for dateString: String, with tags: String = "",
+        isHome: Bool = false
     ) -> String {
         let regex: NSRegularExpression
         do {
@@ -54,16 +55,40 @@ public class TemplateManager {
                 with: SettingsManager.shared.calendarSectionHeader)
         }
 
+        let dailySection =
+            isHome
+            ? "\(SettingsManager.shared.dailySectionHeader) - [[\(dateString)]]"
+            : SettingsManager.shared.dailySectionHeader
+
         if processedTemplate.contains("%daily_placeholder%") {
             processedTemplate = processedTemplate.replacingOccurrences(
                 of: "%daily_placeholder%",
-                with: SettingsManager.shared.dailySectionHeader)
+                with: dailySection)
         }
 
-        if processedTemplate.contains("%tag_placeholder%") {
-            processedTemplate = processedTemplate.replacingOccurrences(
-                of: "%tag_placeholder%",
-                with: SettingsManager.shared.dailyNoteTag)
+        if isHome == true {
+            processedTemplate = replaceDailySection(
+                in: processedTemplate, with: dateString)
+        }
+
+        if !tags.isEmpty {
+
+            print("tags: \(tags)")
+            let tagsArray = tags.components(separatedBy: ",")
+            let formattedTags = tagsArray.map {
+                "#\($0.trimmingCharacters(in: .whitespaces))#"
+            }.joined(separator: " ")
+
+            print("formatted tags: \(formattedTags)")
+
+            if processedTemplate.contains("%tag_placeholder%") {
+
+                processedTemplate = processedTemplate.replacingOccurrences(
+                    of: "%tag_placeholder%", with: formattedTags)
+            } else {
+                processedTemplate += "\n\n\(formattedTags)"
+            }
+
         }
 
         print("date template manager processed template: \(processedTemplate)")
