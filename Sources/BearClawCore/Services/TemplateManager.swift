@@ -48,6 +48,26 @@ public class TemplateManager {
                 .replacingCharacters(in: matchRange, with: targetDateString)
         }
 
+        if processedTemplate.contains("%calendar_placeholder%") {
+            processedTemplate = processedTemplate.replacingOccurrences(
+                of: "%calendar_placeholder%",
+                with: SettingsManager.shared.calendarSectionHeader)
+        }
+
+        if processedTemplate.contains("%daily_placeholder%") {
+            processedTemplate = processedTemplate.replacingOccurrences(
+                of: "%daily_placeholder%",
+                with: SettingsManager.shared.dailySectionHeader)
+        }
+
+        if processedTemplate.contains("%tag_placeholder%") {
+            processedTemplate = processedTemplate.replacingOccurrences(
+                of: "%tag_placeholder%",
+                with: SettingsManager.shared.dailyNoteTag)
+        }
+
+        print("date template manager processed template: \(processedTemplate)")
+
         let selectedCalendars = calendarManager.selectedCalendars()
         let updatedProcessedTemplate = replaceCalendarSection(
             in: processedTemplate,
@@ -60,9 +80,11 @@ public class TemplateManager {
     func replaceCalendarSection(in content: String, with events: String)
         -> String
     {
+
         let calendarSectionHeader =
             UserDefaults.standard.string(forKey: "calendarSectionHeader")
-            ?? "## Calendar Events"
+            ?? "### Calendar Events"
+
         let pattern =
             "\(calendarSectionHeader)\\n(?:- \\[ \\] .*\\n|- \\[x\\] .*\\n|No events scheduled for this day.\\n)*"
 
@@ -73,12 +95,14 @@ public class TemplateManager {
                 in: content, options: [],
                 range: NSRange(location: 0, length: content.utf16.count))
             {
+
                 let range = Range(match.range, in: content)!
                 let before = content[..<range.lowerBound]
                 let after = content[range.upperBound...]
                 return before + "\(calendarSectionHeader)\n" + events + "\n"
                     + after
             } else {
+
                 return content
             }
         } catch {
@@ -95,7 +119,7 @@ public class TemplateManager {
         if let range = content.range(of: targetString) {
             let before = content[..<range.lowerBound]
             let after = content[range.upperBound...]
-            return before + "fodabear://sync-note?id=\(id)" + after
+            return before + "[Sync now](fodabear://sync-note?id=\(id))" + after
         } else {
             return content
         }
@@ -178,12 +202,10 @@ public class TemplateManager {
     func createDailyNoteWithTemplate(
         for dateString: String, with dailyTemplate: String? = "Daily"
     ) {
-        print("template content: \(dailyTemplate ?? "Daily")")
+
         let tag = UserDefaults.standard.string(forKey: "dailyNoteTag") ?? ""
         let processedTemplate = processTemplate(
             dailyTemplate ?? "Daily", for: dateString, with: tag)
-        print(processedTemplate)
-        print("processed template: \(processedTemplate)")
 
         let urlString =
             "bear://x-callback-url/create?title=&text=\(processedTemplate)"

@@ -70,13 +70,13 @@ public class NoteManager: ObservableObject {
         print(
             "Updating daily note with events from selected calendars: \(selectedCalendars.map { $0.title })"
         )
+
         let events = calendarManager.fetchCalendarEvents(
             for: dateString, calendars: selectedCalendars)
         let cleanedEvents = events.replacingOccurrences(
             of: "Optional(\"", with: ""
         ).replacingOccurrences(of: "\")", with: "")
 
-        print("update daily calendar: \(events)")
         var updatedContent = self.templateManager.replaceCalendarSection(
             in: noteContent, with: cleanedEvents)
         updatedContent = self.templateManager.replaceSyncSection(

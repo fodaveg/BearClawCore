@@ -138,6 +138,9 @@ public class NoteHandler: NSObject, ObservableObject {
     }
 
     @objc public func updateDailyNoteIfNeededSuccessForSync(url: URL) {
+
+        print("success for sync")
+
         guard
             let components = URLComponents(
                 url: url, resolvingAgainstBaseURL: false),

@@ -119,22 +119,23 @@ public class CalendarManager: ObservableObject {
                 previousOutput = "No events scheduled for this day."
             }
             return previousOutput
+        } else {
+
+            let now = Date()
+            let formattedEvents = events.map { event in
+                let formatter = DateFormatter()
+                formatter.dateFormat = "HH:mm"
+                let startTimeString = formatter.string(from: event.startDate)
+                let endTimeString = formatter.string(from: event.endDate)
+
+                let status = event.endDate < now ? "x" : " "
+
+                return
+                    "- [\(status)] \(startTimeString) - \(endTimeString): \(event.title ?? "")"
+            }.joined(separator: "\n")
+            previousOutput = formattedEvents
         }
 
-        let now = Date()
-        let formattedEvents = events.map { event in
-            let formatter = DateFormatter()
-            formatter.dateFormat = "HH:mm"
-            let startTimeString = formatter.string(from: event.startDate)
-            let endTimeString = formatter.string(from: event.endDate)
-
-            let status = event.endDate < now ? "x" : " "
-
-            return
-                "- [\(status)] \(startTimeString) - \(endTimeString): \(event.title ?? "")"
-        }.joined(separator: "\n")
-
-        previousOutput = formattedEvents
         return previousOutput
     }
 
